@@ -8,7 +8,7 @@ Java
 
 ## Herramientas Utilizadas
 - Java
-- Online GDB (opcional)
+- Online GDB 
 - Terminal o Símbolo del sistema
 
 ## Instrucciones para ejecutar el programa

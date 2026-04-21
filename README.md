@@ -1,65 +1,151 @@
-# Implementación de Autómatas Finitos
+# Actividad 2 — Autómatas Finitos para Análisis Léxico
 
-## Sistema Operativo
-Windows 11
+**Materia:** Lenguajes Formales (C2566-SI2002)
+**Universidad:** EAFIT — Escuela de Ciencias Aplicadas e Ingeniería
+**Profesor:** Adolfo Andrés Castro Sánchez
+**Referencia:** Aho et al., *Compilers: Principles, Techniques & Tools*, 2da ed., Figura 3.14, Sección 3.4.2
 
-## Lenguaje de Programación
-Java
+## Autores
 
-## Herramientas Utilizadas
-- Java
-- Online GDB 
-- Terminal o Símbolo del sistema
+- Nash Díaz Quessep
+- Maybeth López Bedoya
 
-## Instrucciones para ejecutar el programa
-Guardar el archivo con el nombre "Automatas.java".
+## Descripción general
 
-Abrir una terminal o consola en la carpeta donde está el archivo.
+Este proyecto implementa los dos autómatas finitos que aparecen en la Figura 3.14 del libro *Compilers* de Aho. Estos autómatas son la base de la etapa de reconocimiento de tokens en un analizador léxico:
 
-Compilar el programa con el siguiente comando:
+1. **Autómata 1 — Reconocedor de identificadores.** Acepta cualquier cadena que empiece con una letra y esté seguida por cero o más letras o dígitos.
+2. **Autómata 2 — Reconocedor de la palabra reservada `then`.** Acepta la secuencia exacta `t-h-e-n` únicamente cuando va seguida de un carácter que no sea letra ni dígito (o del fin de la entrada).
 
+Ambos autómatas implementan el comportamiento de **lookahead / retroceso** representado por el asterisco (`*`) en el diagrama: el carácter que dispara la transición de salida del loop no forma parte del lexema y se devuelve al buffer de entrada para el siguiente token.
+
+## Entorno
+
+| Componente | Versión |
+|---|---|
+| Sistema operativo | Ubuntu 24.04 LTS (también probado en Windows 11 y macOS) |
+| Lenguaje de programación | Java 21 (compatible con Java 8 en adelante) |
+| Herramienta de compilación | `javac` (JDK) |
+| Editor | Visual Studio Code / IntelliJ IDEA |
+
+No se requieren librerías externas. Solo el JDK estándar.
+
+## Cómo ejecutar
+
+### Requisitos previos
+
+Instalar cualquier JDK (versión 8 o superior). Verificar con:
+
+```bash
+java -version
+javac -version
+```
+
+### Compilación
+
+Desde la raíz del proyecto, ejecutar:
+
+```bash
 javac Automatas.java
+```
 
-Ejecutar el programa con el comando:
+Esto genera el archivo `Automatas.class`.
 
+### Ejecución
+
+```bash
 java Automatas
+```
 
-El programa solicitará ingresar una cadena.
-Ejemplo de entrada:
+El programa va a:
 
-Ingrese una cadena: then
+1. Ejecutar una batería de casos de prueba predefinidos de manera automática.
+2. Entrar en modo interactivo, donde se puede ingresar cualquier cadena y ver cómo ambos autómatas la procesan.
 
-El programa indicará si la cadena es:
-- Es palabra reservada (then)
-- Es identificador
-- No es válido
+Para salir del modo interactivo, presionar ENTER con la línea vacía.
 
-## Explicación del algoritmo
-El programa implementa dos autómatas finitos deterministas (AFD).
+### Ejemplo de salida
 
-El autómata procesa una cadena de entrada símbolo por símbolo.
-Para cada símbolo leído, el programa verifica en qué estado se encuentra actualmente y determina el siguiente estado según las transiciones definidas.
+```
+=== Entrada: "then;" ===
 
-El programa inicia en el estado inicial q0.
+Autómata 2 (then):
+  [estado 0] --'t'--> [estado 1] --'h'--> [estado 2] --'e'--> [estado 3]
+            --'n'--> [estado 4] --no letr/dig(';')--> [estado 5*] (retroceso)
+→ Token: PALABRA_RESERVADA(then)
+→ Lexema: "then"
+→ Siguiente posición: 4 (resto: ";")
+```
 
-Durante la ejecución:
+## Algoritmo
 
-- Para la palabra reservada "then":
-  El autómata recorre los estados q0, q1, q2, q3 y q4 leyendo los caracteres 't', 'h', 'e', 'n' respectivamente.
-  Si la secuencia no coincide en algún punto, la cadena no es reconocida como palabra reservada.
+La implementación sigue el patrón clásico de **máquina de estados basada en switch** descrito en la Sección 3.4.2 del libro de referencia.
 
-- Para el identificador:
-  El autómata valida que la cadena comience con una letra.
-  Luego permite continuar con letras, dígitos o el carácter '_'.
-  Si aparece un símbolo no permitido, la cadena es rechazada.
+### Autómata 1 — Identificador
 
-Este proceso se repite hasta que se hayan leído todos los símbolos de la cadena.
+```
+inicio → (9) --letra--> (10) --otro--> (11)*
+                          ↺ letra | dígito
+```
 
-Al finalizar, el programa verifica el estado final:
+- **Estado 9** (inicial): espera una letra. Cualquier otro carácter rechaza la entrada.
+- **Estado 10** (cuerpo): loop con letras y dígitos. Ante cualquier *otro* carácter, transita al estado 11 **sin consumirlo** (retroceso).
+- **Estado 11** (aceptación, con `*`): emite el token identificador.
 
-- Si termina en el estado de aceptación del autómata "then", se reconoce como palabra reservada.
-- Si termina en el estado de aceptación del autómata de identificador, se reconoce como identificador.
-- En caso contrario, la cadena es considerada no válida.
+### Autómata 2 — Palabra reservada `then`
 
-## Autor
-Trabajo realizado por Maybeth López Bedoya y Nash Díaz Quessep.
+```
+inicio → ( ) -t-> ( ) -h-> ( ) -e-> ( ) -n-> ( ) --no letr/dig--> ( )*
+```
+
+- Los estados 0 a 3 reconocen la secuencia literal `t`, `h`, `e`, `n`. Cualquier desviación rechaza.
+- El estado 4 requiere un carácter que no sea letra ni dígito (o fin de entrada) para transitar al estado de aceptación 5. Esta condición es la que distingue a `then` de identificadores como `thenable`.
+
+### Estrategia del analizador léxico
+
+El método `analizar` prueba primero el autómata 2 (palabra reservada). Si este falla, pasa al autómata 1 (identificador). Esto refleja la regla de precedencia estándar en análisis léxico: **coincidencia más larga con prioridad a la palabra reservada**.
+
+### Mecanismo de retroceso
+
+Cada autómata retorna un objeto `Resultado` que contiene:
+
+- `aceptado` — si la entrada produjo un token válido.
+- `lexema` — únicamente los caracteres que pertenecen al token reconocido.
+- `siguientePos` — el índice del carácter que disparó la transición de salida. Ese carácter **no se consume**, simulando el retroceso denotado por `*` en el diagrama.
+- `traza` — una traza legible de las transiciones de estado, útil para visualización y depuración.
+
+## Casos de prueba
+
+El programa corre automáticamente los siguientes casos:
+
+| Entrada | Resultado esperado |
+|---|---|
+| `then` | PALABRA_RESERVADA(then) |
+| `then;` | PALABRA_RESERVADA(then), resto `";"` |
+| `thenable` | IDENTIFICADOR `"thenable"` |
+| `contador` | IDENTIFICADOR `"contador"` |
+| `x1 + y` | IDENTIFICADOR `"x1"`, resto `" + y"` |
+| `var_1` | IDENTIFICADOR `"var"`, resto `"_1"` (el guion bajo no está en la Figura 3.14) |
+| `123abc` | Rechazado (no empieza con letra) |
+| `the` | IDENTIFICADOR `"the"` (no completa `then`) |
+| `""` | Entrada vacía |
+
+## Estructura del proyecto
+
+```
+.
+├── Automatas.java   # Código fuente con ambos autómatas y el driver
+└── README.md        # Este archivo
+```
+
+## Video de demostración
+
+Video explicativo (≤ 5 minutos) con la implementación, el algoritmo y una ejecución en vivo del programa:
+
+**Enlace al video:** *[por agregar después de grabar]*
+
+## Referencias
+
+Aho, Alfred V., Monica S. Lam, Ravi Sethi, y Jeffrey D. Ullman. *Compilers: Principles, Techniques, & Tools*. 2da ed. Boston: Pearson/Addison Wesley, 2007. Sección 3.4.2, Figura 3.14.
+
+

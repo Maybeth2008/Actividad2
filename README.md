@@ -142,7 +142,7 @@ El programa corre automáticamente los siguientes casos:
 
 Video explicativo (≤ 5 minutos) con la implementación, el algoritmo y una ejecución en vivo del programa:
 
-**Enlace al video:** *[por agregar después de grabar]*
+**Enlace al video:** *(https://youtu.be/20Bq1-qJq68)*
 
 ## Referencias
 
